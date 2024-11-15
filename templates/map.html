@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route Map</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCTLKM1PdC2jaJEdMuuMq383I7XLB4QNWE&libraries=drawing,geometry&v=weekly"></script>
+    <style>
+        /* Global styles */
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f7f7f7;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-top: 20px;
+            color: #2c3e50;
+        }
+        h2 {
+            font-size: 1.8em;
+            color: #34495e;
+            text-align: center;
+            margin: 20px 0;
+        }
+        /* Weather information styles */
+        .weather-info {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .weather-info h3 {
+            font-size: 1.5em;
+            margin: 0;
+            color: #3498db;
+        }
+        .weather-info p {
+            font-size: 1.1em;
+            margin: 10px 0;
+        }
+        .weather-info p span {
+            font-weight: bold;
+        }
+        /* Map container styles */
+        #map {
+            height: 500px;
+            width: 100%;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        /* Route distances styles */
+        #distances {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        #distances p {
+            font-size: 1.2em;
+            margin: 5px 0;
+            color: #2c3e50;
+        }
+        /* Responsive design */
+        @media screen and (max-width: 768px) {
+            .weather-info, #distances {
+                margin: 10px;
+                padding: 15px;
+            }
+            h1 {
+                font-size: 2em;
+            }
+            h2 {
+                font-size: 1.6em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Route Map</h1>
+    <h2>Weather Information:</h2>
+    <div class="weather-info">
+        <h3>Start Location: {{ start_weather['city'] }}, {{ start_weather['country'] }}</h3>
+        <p>Temperature: <span>{{ start_weather['temperature'] }}°C</span></p>
+        <p>Weather: <span>{{ start_weather['description'] }}</span></p>
+    </div>
+
+    <div class="weather-info">
+        <h3>End Location: {{ end_weather['city'] }}, {{ end_weather['country'] }}</h3>
+        <p>Temperature: <span>{{ end_weather['temperature'] }}°C</span></p>
+        <p>Weather: <span>{{ end_weather['description'] }}</span></p>
+    </div>
+
+    <div id="map"></div>
+
+    <div id="distances">
+        <h3>Route Distances:</h3>
+        <p id="blueDistance">Blue Route Distance: -- km</p>
+        <p id="redDistance">Red Route Distance: -- km</p>
+        <p id="purpleDistance">Purple Route Distance: -- km</p>
+        <p id="greenDistance">Green Route Distance: -- km</p>
+    </div>
+
+    <script>
+        let map;
+
+        function initMap() {
+            // Initialize map centered on the start location
+            const start = { lat: {{ route[0]['legs'][0]['start_location']['lat'] }}, lng: {{ route[0]['legs'][0]['start_location']['lng'] }} };
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 12,
+                center: start
+            });
+
+            // Create DirectionsRenderer and DirectionsService
+            const directionsRenderer = new google.maps.DirectionsRenderer();
+            const directionsService = new google.maps.DirectionsService();
+            directionsRenderer.setMap(map);
+
+            const routePath = {
+                origin: "{{ request.form['start'] }}",
+                destination: "{{ request.form['end'] }}",
+                travelMode: google.maps.TravelMode.DRIVING,
+                provideRouteAlternatives: true  // Allow alternatives (so we can find the shortest route)
+            };
+
+            directionsService.route(routePath, function(result, status) {
+                if (status === google.maps.DirectionsStatus.OK) {
+                    directionsRenderer.setDirections(result);
+
+                    // Draw the blue route (default route)
+                    const defaultRoute = result.routes[0].overview_path;  // First route is the default
+                    const blueRoute = new google.maps.Polyline({
+                        path: defaultRoute,
+                        geodesic: true,
+                        strokeColor: 'blue',
+                        strokeOpacity: 1.0,
+                        strokeWeight: 5
+                    });
+                    blueRoute.setMap(map);
+
+                    // Calculate and display the distance of the blue route
+                    const blueDistance = google.maps.geometry.spherical.computeLength(blueRoute.getPath());
+                    document.getElementById("blueDistance").innerText = "Blue Route Distance: " + (blueDistance / 1000).toFixed(2) + " km";
+
+                    // Draw the red route (shortest route)
+                    if (result.routes.length > 1) {
+                        const shortestRoute = result.routes[1].overview_path;  // Second route is considered the shortest
+                        const redRoute = new google.maps.Polyline({
+                            path: shortestRoute,
+                            geodesic: true,
+                            strokeColor: 'red',
+                            strokeOpacity: 1.0,
+                            strokeWeight: 5
+                        });
+                        redRoute.setMap(map);
+
+                        // Calculate and display the distance of the red route
+                        const redDistance = google.maps.geometry.spherical.computeLength(redRoute.getPath());
+                        document.getElementById("redDistance").innerText = "Red Route Distance: " + (redDistance / 1000).toFixed(2) + " km";
+                    }
+
+                    // Add logic for the purple route based on good weather
+                    let purpleRoute = null;
+                    if ({{ start_weather['temperature'] }} > 20 && {{ end_weather['temperature'] }} > 20) {
+                        const goodWeatherRoute = result.routes[0].overview_path;  // Use the default route if it's good weather
+                        purpleRoute = new google.maps.Polyline({
+                            path: goodWeatherRoute,
+                            geodesic: true,
+                            strokeColor: 'purple',
+                            strokeOpacity: 1.0,
+                            strokeWeight: 5
+                        });
+                        purpleRoute.setMap(map);
+
+                        // Calculate and display the distance of the purple route
+                        const purpleDistance = google.maps.geometry.spherical.computeLength(purpleRoute.getPath());
+                        document.getElementById("purpleDistance").innerText = "Purple Route Distance: " + (purpleDistance / 1000).toFixed(2) + " km";
+                    }
+
+                    // Draw the green route (third alternative)
+                    if (result.routes.length > 2) {
+                        const greenRoute = result.routes[2].overview_path;  // Third route as the green route
+                        const greenPolyline = new google.maps.Polyline({
+                            path: greenRoute,
+                            geodesic: true,
+                            strokeColor: 'green',
+                            strokeOpacity: 1.0,
+                            strokeWeight: 5
+                        });
+                        greenPolyline.setMap(map);
+
+                        // Calculate and display the distance of the green route
+                        const greenDistance = google.maps.geometry.spherical.computeLength(greenPolyline.getPath());
+                        document.getElementById("greenDistance").innerText = "Green Route Distance: " + (greenDistance / 1000).toFixed(2) + " km";
+                    } else {
+                        document.getElementById("greenDistance").innerText = "Green Route Distance: -- km";  // Handle case where green route is not available
+                    }
+                } else {
+                    alert('Error: ' + status);
+                }
+            });
+        }
+
+        // Initialize the map when the window is loaded
+        window.onload = initMap;
+    </script>
+</body>
+</html>
