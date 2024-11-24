@@ -5,7 +5,7 @@ import requests
 app = Flask(__name__)
 
 # Replace with your actual Google Maps API key
-GOOGLE_MAPS_API_KEY = "AIzaSyCTLKM1PdC2jaJEdMuuMq383I7XLB4QNWE"
+GOOGLE_MAPS_API_KEY = "AIzaSyB_xhewWLsZfWurFxaYJ_Wk_YngigEKAAU"
 WEATHER_API_KEY = "26789c50159d292a76c28eef3e7e68f5"  # Your OpenWeatherMap API key
 
 # Initialize Google Maps client

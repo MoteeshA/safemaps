@@ -4,102 +4,123 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Route Map</title>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCTLKM1PdC2jaJEdMuuMq383I7XLB4QNWE&libraries=drawing,geometry&v=weekly"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB_xhewWLsZfWurFxaYJ_Wk_YngigEKAAU&libraries=drawing,geometry,places&v=weekly"></script>
     <style>
         /* Global styles */
         body {
             font-family: 'Arial', sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f7f7f7;
+            background-color: #f0f0f0;
             color: #333;
         }
-        h1 {
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px 0;
             text-align: center;
             font-size: 2.5em;
-            margin-top: 20px;
-            color: #2c3e50;
+            margin-bottom: 30px;
         }
-        h2 {
-            font-size: 1.8em;
-            color: #34495e;
-            text-align: center;
-            margin: 20px 0;
-        }
+
         /* Weather information styles */
+        .weather-container {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+        }
         .weather-info {
             background-color: #fff;
             border-radius: 8px;
             padding: 20px;
-            margin: 20px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            width: 45%;
+            text-align: center;
         }
         .weather-info h3 {
-            font-size: 1.5em;
-            margin: 0;
+            font-size: 1.8em;
             color: #3498db;
+            margin-bottom: 10px;
         }
         .weather-info p {
-            font-size: 1.1em;
+            font-size: 1.2em;
             margin: 10px 0;
         }
         .weather-info p span {
             font-weight: bold;
         }
-        /* Map container styles */
+
+        /* Route Map container styles */
         #map {
             height: 500px;
             width: 100%;
             border-radius: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 40px;
         }
-        /* Route distances styles */
-        #distances {
+
+        /* Route Distances section styles */
+        .distances-container {
             background-color: #fff;
             border-radius: 8px;
             padding: 20px;
-            margin: 20px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
             text-align: center;
+            margin-bottom: 40px;
         }
-        #distances p {
-            font-size: 1.2em;
-            margin: 5px 0;
+        .distances-container h3 {
+            font-size: 1.8em;
             color: #2c3e50;
+            margin-bottom: 15px;
         }
+        .distances-container p {
+            font-size: 1.2em;
+            margin: 10px 0;
+            color: #34495e;
+        }
+
         /* Responsive design */
         @media screen and (max-width: 768px) {
-            .weather-info, #distances {
-                margin: 10px;
-                padding: 15px;
-            }
-            h1 {
+            header {
                 font-size: 2em;
+                padding: 15px 0;
             }
-            h2 {
-                font-size: 1.6em;
+            .weather-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            .weather-info {
+                width: 80%;
+                margin-bottom: 20px;
+            }
+            #map {
+                height: 400px;
             }
         }
     </style>
 </head>
 <body>
-    <h1>Route Map</h1>
-    <h2>Weather Information:</h2>
-    <div class="weather-info">
-        <h3>Start Location: {{ start_weather['city'] }}, {{ start_weather['country'] }}</h3>
-        <p>Temperature: <span>{{ start_weather['temperature'] }}°C</span></p>
-        <p>Weather: <span>{{ start_weather['description'] }}</span></p>
-    </div>
 
-    <div class="weather-info">
-        <h3>End Location: {{ end_weather['city'] }}, {{ end_weather['country'] }}</h3>
-        <p>Temperature: <span>{{ end_weather['temperature'] }}°C</span></p>
-        <p>Weather: <span>{{ end_weather['description'] }}</span></p>
+    <header>
+        Route Map
+    </header>
+
+    <div class="weather-container">
+        <div class="weather-info">
+            <h3>Start Location: {{ start_weather['city'] }}, {{ start_weather['country'] }}</h3>
+            <p>Temperature: <span>{{ start_weather['temperature'] }}°C</span></p>
+            <p>Weather: <span>{{ start_weather['description'] }}</span></p>
+        </div>
+
+        <div class="weather-info">
+            <h3>End Location: {{ end_weather['city'] }}, {{ end_weather['country'] }}</h3>
+            <p>Temperature: <span>{{ end_weather['temperature'] }}°C</span></p>
+            <p>Weather: <span>{{ end_weather['description'] }}</span></p>
+        </div>
     </div>
 
     <div id="map"></div>
 
-    <div id="distances">
+    <div class="distances-container">
         <h3>Route Distances:</h3>
         <p id="blueDistance">Blue Route Distance: -- km</p>
         <p id="redDistance">Red Route Distance: -- km</p>
@@ -111,14 +132,12 @@
         let map;
 
         function initMap() {
-            // Initialize map centered on the start location
             const start = { lat: {{ route[0]['legs'][0]['start_location']['lat'] }}, lng: {{ route[0]['legs'][0]['start_location']['lng'] }} };
             map = new google.maps.Map(document.getElementById('map'), {
                 zoom: 12,
                 center: start
             });
 
-            // Create DirectionsRenderer and DirectionsService
             const directionsRenderer = new google.maps.DirectionsRenderer();
             const directionsService = new google.maps.DirectionsService();
             directionsRenderer.setMap(map);
@@ -127,15 +146,14 @@
                 origin: "{{ request.form['start'] }}",
                 destination: "{{ request.form['end'] }}",
                 travelMode: google.maps.TravelMode.DRIVING,
-                provideRouteAlternatives: true  // Allow alternatives (so we can find the shortest route)
+                provideRouteAlternatives: true
             };
 
             directionsService.route(routePath, function(result, status) {
                 if (status === google.maps.DirectionsStatus.OK) {
                     directionsRenderer.setDirections(result);
 
-                    // Draw the blue route (default route)
-                    const defaultRoute = result.routes[0].overview_path;  // First route is the default
+                    const defaultRoute = result.routes[0].overview_path;
                     const blueRoute = new google.maps.Polyline({
                         path: defaultRoute,
                         geodesic: true,
@@ -145,13 +163,11 @@
                     });
                     blueRoute.setMap(map);
 
-                    // Calculate and display the distance of the blue route
                     const blueDistance = google.maps.geometry.spherical.computeLength(blueRoute.getPath());
                     document.getElementById("blueDistance").innerText = "Blue Route Distance: " + (blueDistance / 1000).toFixed(2) + " km";
 
-                    // Draw the red route (shortest route)
                     if (result.routes.length > 1) {
-                        const shortestRoute = result.routes[1].overview_path;  // Second route is considered the shortest
+                        const shortestRoute = result.routes[1].overview_path;
                         const redRoute = new google.maps.Polyline({
                             path: shortestRoute,
                             geodesic: true,
@@ -161,15 +177,16 @@
                         });
                         redRoute.setMap(map);
 
-                        // Calculate and display the distance of the red route
                         const redDistance = google.maps.geometry.spherical.computeLength(redRoute.getPath());
                         document.getElementById("redDistance").innerText = "Red Route Distance: " + (redDistance / 1000).toFixed(2) + " km";
+
+                        showNearbyPlaces(shortestRoute, 'hospital');
+                        showNearbyPlaces(shortestRoute, 'police');
                     }
 
-                    // Add logic for the purple route based on good weather
                     let purpleRoute = null;
                     if ({{ start_weather['temperature'] }} > 20 && {{ end_weather['temperature'] }} > 20) {
-                        const goodWeatherRoute = result.routes[0].overview_path;  // Use the default route if it's good weather
+                        const goodWeatherRoute = result.routes[0].overview_path;
                         purpleRoute = new google.maps.Polyline({
                             path: goodWeatherRoute,
                             geodesic: true,
@@ -179,14 +196,12 @@
                         });
                         purpleRoute.setMap(map);
 
-                        // Calculate and display the distance of the purple route
                         const purpleDistance = google.maps.geometry.spherical.computeLength(purpleRoute.getPath());
                         document.getElementById("purpleDistance").innerText = "Purple Route Distance: " + (purpleDistance / 1000).toFixed(2) + " km";
                     }
 
-                    // Draw the green route (third alternative)
                     if (result.routes.length > 2) {
-                        const greenRoute = result.routes[2].overview_path;  // Third route as the green route
+                        const greenRoute = result.routes[2].overview_path;
                         const greenPolyline = new google.maps.Polyline({
                             path: greenRoute,
                             geodesic: true,
@@ -196,11 +211,10 @@
                         });
                         greenPolyline.setMap(map);
 
-                        // Calculate and display the distance of the green route
                         const greenDistance = google.maps.geometry.spherical.computeLength(greenPolyline.getPath());
                         document.getElementById("greenDistance").innerText = "Green Route Distance: " + (greenDistance / 1000).toFixed(2) + " km";
                     } else {
-                        document.getElementById("greenDistance").innerText = "Green Route Distance: -- km";  // Handle case where green route is not available
+                        document.getElementById("greenDistance").innerText = "Green Route Distance: -- km";
                     }
                 } else {
                     alert('Error: ' + status);
@@ -208,7 +222,34 @@
             });
         }
 
-        // Initialize the map when the window is loaded
+        function showNearbyPlaces(route, placeType) {
+            const service = new google.maps.places.PlacesService(map);
+
+            route.forEach((point, index) => {
+                if (index % 10 === 0) {
+                    const request = {
+                        location: point,
+                        radius: 5000,
+                        type: [placeType]
+                    };
+
+                    service.nearbySearch(request, function(results, status) {
+                        if (status === google.maps.places.PlacesServiceStatus.OK) {
+                            results.forEach(place => {
+                                const marker = new google.maps.Marker({
+                                    position: place.geometry.location,
+                                    map: map,
+                                    title: place.name,
+                                    icon: placeType === 'hospital' ? 'https://maps.gstatic.com/mapfiles/ms2/micons/hospitals.png' :
+                                        'https://maps.gstatic.com/mapfiles/ms2/micons/policestation.png'
+                                });
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
         window.onload = initMap;
     </script>
 </body>
